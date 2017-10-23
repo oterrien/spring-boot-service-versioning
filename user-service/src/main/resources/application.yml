@@ -1,0 +1,15 @@
+logging:
+  level:
+    org.springframework.web: WARN
+    com.ote.test: INFO
+
+server:
+  port: ${PORT:8079}
+
+spring:
+  application:
+    name: UserService
+
+api:
+  gateway:
+    url: http://localhost:7070

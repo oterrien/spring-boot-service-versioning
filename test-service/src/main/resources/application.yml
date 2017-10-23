@@ -1,0 +1,17 @@
+logging:
+  level:
+    org.springframework.web: WARN
+    com.ote.test: INFO
+
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: TestService
+
+api:
+  gateway:
+    url: http://localhost:7070
+
+value: ${VALUE}

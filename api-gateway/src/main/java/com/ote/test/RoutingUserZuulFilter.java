@@ -46,6 +46,9 @@ public class RoutingUserZuulFilter extends ZuulFilter {
         return "pre";
     }
 
+    /**
+     * Must be set after PreDecorationFilter
+     */
     @Override
     public int filterOrder() {
         return 100;

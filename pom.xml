@@ -9,6 +9,7 @@
     <artifactId>spring-boot-service-versioning</artifactId>
     <packaging>pom</packaging>
     <version>1.0.0-SNAPSHOT</version>
+
     <modules>
         <module>api-gateway</module>
         <module>test-service</module>

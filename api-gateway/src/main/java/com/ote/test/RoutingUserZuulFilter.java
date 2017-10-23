@@ -65,6 +65,7 @@ public class RoutingUserZuulFilter extends ZuulFilter {
         RequestContext requestContext = RequestContext.getCurrentContext();
         HttpServletRequest request = requestContext.getRequest();
 
+        // Get user from Authorization header (Basic for the moment)
         String user = Optional.ofNullable(request.getHeader(HttpHeaders.AUTHORIZATION)).
                 map(authorization -> {
                     if (authorization.startsWith("Basic")) {
@@ -77,20 +78,21 @@ public class RoutingUserZuulFilter extends ZuulFilter {
                 orElse(null);
 
         String requestUri = URI.create(request.getRequestURI()).getPath();
-
         String contextPath = requestUri.substring(0, requestUri.indexOf("/", 1));
-        requestUri = requestUri.replaceAll(contextPath, "");
 
         Route matchingRoute = routeLocator.getMatchingRoute(contextPath);
 
+        // url: "1.1.19@http://localhost:8080;1.2.3@http://localhost:8081"
         String location = matchingRoute.getLocation();
         if (location.contains(";")) {
 
+            // Split by versions@hosts
             Set<MatchingLoc> matchingLocSet = Stream.of(location.split(";")).
                     map(String::trim).
                     map(MatchingLoc::new).
                     collect(Collectors.toSet());
 
+            // Call UserService to know which route to take for the given user
             Route userServiceRoute = routeLocator.getMatchingRoute("/user-service");
             String userServiceLocation = userServiceRoute.getLocation();
             URI uri = UriComponentsBuilder.fromHttpUrl(userServiceLocation).
@@ -108,7 +110,6 @@ public class RoutingUserZuulFilter extends ZuulFilter {
                         findAny().
                         orElseThrow(() -> new Exception("Route not found"));
 
-                //requestContext.set("requestURI", UriComponentsBuilder.fromHttpUrl(newRoute).build().toUriString());
                 requestContext.setRouteHost(new URL(newRoute));
 
             } catch (Exception e) {

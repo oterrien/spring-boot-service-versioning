@@ -13,7 +13,8 @@ spring:
 zuul:
   routes:
     test-service:
-      url: "1.1.19@http://localhost:8080;1.2.3@http://localhost:8081"
+#      url: "1.1.19@http://localhost:8080;1.2.3@http://localhost:8081"
+      url: "DYNAMIC|http://localhost:8080"
       sensitiveHeaders:
     user-service:
       url: "http://localhost:8079"
@@ -21,3 +22,11 @@ zuul:
     routing-configuration-service:
       url: "http://localhost:8078"
       sensitiveHeaders:
+
+hystrix:
+  command:
+    default:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 30000

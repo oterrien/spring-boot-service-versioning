@@ -20,9 +20,6 @@ import javax.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.net.URL;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Component
 @Slf4j
@@ -33,6 +30,8 @@ public class RoutingUserZuulFilter extends ZuulFilter {
 
     @Autowired
     private DiscoveryClientRouteLocator routeLocator;
+
+    private static final String DYNAMIC = "DYNAMIC";
 
 
     /**
@@ -64,9 +63,17 @@ public class RoutingUserZuulFilter extends ZuulFilter {
 
         RequestContext requestContext = RequestContext.getCurrentContext();
         HttpServletRequest request = requestContext.getRequest();
+        String requestUri = URI.create(request.getRequestURI()).getPath();
+        String contextPath = requestUri.substring(0, requestUri.indexOf("/", 1));
+        Optional.ofNullable(routeLocator.getMatchingRoute(contextPath)).
+                filter(matchingRoute -> matchingRoute.getLocation().startsWith(DYNAMIC)).
+                ifPresent(matchingRoute -> findRoute(requestContext, contextPath.replace("/", ""), getUserFromHeader(request), matchingRoute.getLocation()));
 
-        // Get user from Authorization header (Basic for the moment)
-        String user = Optional.ofNullable(request.getHeader(HttpHeaders.AUTHORIZATION)).
+        return null;
+    }
+
+    private String getUserFromHeader(HttpServletRequest request) {
+        return Optional.ofNullable(request.getHeader(HttpHeaders.AUTHORIZATION)).
                 map(authorization -> {
                     if (authorization.startsWith("Basic")) {
                         String credentialsBase64 = authorization.replace("Basic", "").trim();
@@ -76,63 +83,109 @@ public class RoutingUserZuulFilter extends ZuulFilter {
                     return null;
                 }).
                 orElse(null);
+    }
 
-        String requestUri = URI.create(request.getRequestURI()).getPath();
-        String contextPath = requestUri.substring(0, requestUri.indexOf("/", 1));
+    private void findRoute(RequestContext requestContext, String contextPath, String user, String matchingRoute) {
 
-        Route matchingRoute = routeLocator.getMatchingRoute(contextPath);
+        try {
+            URL url = new URL(matchingRoute.split("\\|")[1]);
 
-        // url: "1.1.19@http://localhost:8080;1.2.3@http://localhost:8081"
-        String location = matchingRoute.getLocation();
-        if (location.contains(";")) {
-
-            // Split by versions@hosts
-            Set<MatchingLoc> matchingLocSet = Stream.of(location.split(";")).
-                    map(String::trim).
-                    map(MatchingLoc::new).
-                    collect(Collectors.toSet());
-
-            // Call UserService to know which route to take for the given user
-            Route userServiceRoute = routeLocator.getMatchingRoute("/user-service");
-            String userServiceLocation = userServiceRoute.getLocation();
-            URI uri = UriComponentsBuilder.fromHttpUrl(userServiceLocation).
-                    path("/api/v1/routes").
-                    path(contextPath + "/" + user).
-                    build().
-                    encode().
-                    toUri();
-
-            ResponseEntity<String> versionToUse = restTemplate.getForEntity(uri, String.class);
-
-            try {
-                String newRoute = matchingLocSet.stream().
-                        filter(p -> p.getVersion().equals(versionToUse.getBody())).
-                        map(MatchingLoc::getLocation).
-                        findAny().
-                        orElseThrow(() -> new Exception("Route not found"));
-
-                requestContext.setRouteHost(new URL(newRoute));
-
-            } catch (Exception e) {
-                log.error(e.getMessage(), e);
-                requestContext.unset();
-                requestContext.getResponse().setContentType(MediaType.TEXT_HTML_VALUE);
-                requestContext.setResponseStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
-                requestContext.setSendZuulResponse(false);
-                return null;
+            if (user != null) {
+                String versionFromUserService = getVersionFromUserService(contextPath, user);
+                if (versionFromUserService != null) {
+                    String urlFromRoutingConfigurationService = getUrlFromRoutingConfigurationService(contextPath, versionFromUserService);
+                    if (urlFromRoutingConfigurationService != null) {
+                        log.info("For contextPath " + contextPath + ", redirect User " + user + " to " + urlFromRoutingConfigurationService);
+                        url = new URL(urlFromRoutingConfigurationService);
+                    }
+                }
             }
+            requestContext.setRouteHost(url);
 
-        } else {
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            requestContext.unset();
+            requestContext.getResponse().setContentType(MediaType.TEXT_HTML_VALUE);
+            requestContext.setResponseStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            requestContext.setResponseBody(e.getMessage());
+            requestContext.setSendZuulResponse(false);
+        }
+    }
+
+    /**
+     * Call UserService to find a configuration for the given contextPath and the user
+     *
+     * @param contextPath
+     * @param user
+     * @return
+     */
+    private String getVersionFromUserService(String contextPath, String user) {
+        Route userServiceRoute = routeLocator.getMatchingRoute("/user-service");
+        String userServiceLocation = userServiceRoute.getLocation();
+        URI userServiceUri = UriComponentsBuilder.fromHttpUrl(userServiceLocation).
+                path("/api/v1/routes").
+                path("/" + contextPath).
+                path("/" + user).
+                path("/version").
+                build().encode().toUri();
+        ResponseEntity<String> versionToUse = restTemplate.getForEntity(userServiceUri, String.class);
+        return versionToUse.getBody();
+    }
+
+    private String getUrlFromRoutingConfigurationService(String contextPath, String version) throws Exception {
+
+        Route routingConfigurationServiceRoute = routeLocator.getMatchingRoute("/routing-configuration-service");
+        String routingConfigurationServiceLocation = routingConfigurationServiceRoute.getLocation();
+        URI routingConfigurationServiceUri = UriComponentsBuilder.fromHttpUrl(routingConfigurationServiceLocation).
+                path("/api/v1/routes").
+                path("/" + contextPath).
+                path("/" + version).
+                path("/location").
+                build().encode().toUri();
+        ResponseEntity<String> versionToUse = restTemplate.getForEntity(routingConfigurationServiceUri, String.class);
+        return versionToUse.getBody();
+
+    }
+
+/*    private Object findRoute(RequestContext requestContext, String contextPath, String user, String location) {
+
+        // Split by versions@hosts
+        Set<MatchingLoc> matchingLocSet = Stream.of(location.split(";")).
+                map(String::trim).
+                map(MatchingLoc::new).
+                collect(Collectors.toSet());
+
+        // Call UserService to know which route to take for the given user
+        Route userServiceRoute = routeLocator.getMatchingRoute("/user-service");
+        String userServiceLocation = userServiceRoute.getLocation();
+        URI uri = UriComponentsBuilder.fromHttpUrl(userServiceLocation).
+                path("/api/v1/routes").
+                path(contextPath + "/" + user).
+                build().
+                encode().
+                toUri();
+
+        ResponseEntity<String> versionToUse = restTemplate.getForEntity(uri, String.class);
+
+        try {
+            String newRoute = matchingLocSet.stream().
+                    filter(p -> p.getVersion().equals(versionToUse.getBody())).
+                    map(MatchingLoc::getLocation).
+                    findAny().
+                    orElseThrow(() -> new Exception("Route not found"));
+
+            requestContext.setRouteHost(new URL(newRoute));
+            return null;
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            requestContext.unset();
+            requestContext.getResponse().setContentType(MediaType.TEXT_HTML_VALUE);
+            requestContext.setResponseStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            requestContext.setSendZuulResponse(false);
             return null;
         }
-
-
-        // Si la config zuul pour le contextPath c'est url, alors on appelle cet url
-        // Si la config zuul pour le contextPath c'est urls, alors on appelle UserService pour savoir quelle url appeler
-
-
-        return null;
-    }
+    }*/
 
     @Data
     private class MatchingLoc {

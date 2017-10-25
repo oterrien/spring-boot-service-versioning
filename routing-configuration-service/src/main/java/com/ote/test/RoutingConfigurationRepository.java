@@ -5,7 +5,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface UserRouteRepository extends JpaRepository<UserRoute, Integer> {
+public interface RoutingConfigurationRepository extends JpaRepository<RoutingConfiguration, Integer> {
 
-    UserRoute findByKey(@Param("key") UserRoute.Key key);
+    RoutingConfiguration findByKey(@Param("key") RoutingConfiguration.Key key);
 }

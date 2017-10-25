@@ -1,6 +1,6 @@
 # Service Routing by User
 
-The goal of this POC is to validate the capability to dynamically redirect users' request to a given version of a service withouth any downtime.
+The goal of this POC is to validate the capability to dynamically redirect users' requests to a given version of a service without any downtime.
 
 <img align="center" src="diag.png">
 

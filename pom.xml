@@ -14,6 +14,7 @@
         <module>api-gateway</module>
         <module>test-service</module>
         <module>user-service</module>
+        <module>routing-configuration-service</module>
     </modules>
 
 

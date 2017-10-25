@@ -15,3 +15,4 @@ api:
     url: http://localhost:7070
 
 value: ${VALUE}
+version : ${VERSION}

@@ -97,9 +97,10 @@ public class RoutingUserZuulFilter extends ZuulFilter {
             String userServiceLocation = userServiceRoute.getLocation();
             URI uri = UriComponentsBuilder.fromHttpUrl(userServiceLocation).
                     path("/api/v1/routes").
-                    path(contextPath).
-                    queryParam("user", user).
-                    build().encode().toUri();
+                    path(contextPath + "/" + user).
+                    build().
+                    encode().
+                    toUri();
 
             ResponseEntity<String> versionToUse = restTemplate.getForEntity(uri, String.class);
 

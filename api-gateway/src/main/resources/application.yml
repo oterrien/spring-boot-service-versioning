@@ -14,5 +14,10 @@ zuul:
   routes:
     test-service:
       url: "1.1.19@http://localhost:8080;1.2.3@http://localhost:8081"
+      sensitiveHeaders:
     user-service:
       url: "http://localhost:8079"
+      sensitiveHeaders:
+    routing-configuration-service:
+      url: "http://localhost:8078"
+      sensitiveHeaders:

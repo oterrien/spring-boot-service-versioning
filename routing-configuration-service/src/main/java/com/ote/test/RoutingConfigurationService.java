@@ -4,7 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -13,11 +15,16 @@ public class RoutingConfigurationService {
     @Autowired
     private RoutingConfigurationRepository routingConfigurationRepository;
 
-
     public String find(String contextPath, String version) {
 
-        RoutingConfiguration.Key key = new RoutingConfiguration.Key(contextPath, version);
-        return findByKey(key).map(RoutingConfiguration::getLocation).orElse(null);
+        List<String> allVersions =
+                routingConfigurationRepository.findByContextPath(contextPath).
+                        stream().
+                        map(p -> p.getKey().getVersion()).
+                        collect(Collectors.toList());
+
+        return new VersionFinder(allVersions).find(version).orElse(null);
+
     }
 
     private Optional<RoutingConfiguration> findByKey(RoutingConfiguration.Key key) {

@@ -13,12 +13,15 @@ spring:
 zuul:
   routes:
     test-service:
+      path: /tests/**
       url: "DYNAMIC|http://localhost:8080"
       sensitiveHeaders:
     user-service:
+      path: /users/**
       url: "http://localhost:8079"
       sensitiveHeaders:
     routing-configuration-service:
+      path: /routes/**
       url: "http://localhost:8078"
       sensitiveHeaders:
 

@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -15,34 +14,52 @@ public class RoutingConfigurationService {
     @Autowired
     private RoutingConfigurationRepository routingConfigurationRepository;
 
-    public String find(String contextPath, String version) {
-
-        List<String> allVersions =
-                routingConfigurationRepository.findByContextPath(contextPath).
-                        stream().
-                        map(p -> p.getKey().getVersion()).
-                        collect(Collectors.toList());
-
-        return new VersionFinder(allVersions).find(version).orElse(null);
-
+    public List<RoutingConfigurationEntity> findAll() {
+        return routingConfigurationRepository.findAll();
     }
 
-    private Optional<RoutingConfiguration> findByKey(RoutingConfiguration.Key key) {
+    public String find(String contextPath, String version) {
+
+        List<RoutingConfigurationEntity> routingConfigurations =
+                routingConfigurationRepository.findByContextPath(contextPath);
+
+        VersionFinder.ExtendedVersion extendedVersion = new VersionFinder.ExtendedVersion(version);
+
+        return routingConfigurations.
+                stream().
+                filter(rc -> extendedVersion.accept(new VersionFinder.Version(rc.getKey().getVersion()))).
+                max((rc1, rc2) -> {
+                    VersionFinder.Version v1 = new VersionFinder.Version(rc1.getKey().getVersion());
+                    VersionFinder.Version v2 = new VersionFinder.Version(rc2.getKey().getVersion());
+                    return v1.compareTo(v2);
+                }).
+                map(rc -> rc.getLocation()).
+                orElse(null);
+    }
+
+    private Optional<RoutingConfigurationEntity> findByKey(RoutingConfigurationEntity.Key key) {
         return Optional.ofNullable(routingConfigurationRepository.findByKey(key));
     }
 
     public void save(String contextPath, String version, String location) {
-        RoutingConfiguration.Key key = new RoutingConfiguration.Key(contextPath, version);
-        RoutingConfiguration userRoute = new RoutingConfiguration();
-        userRoute.setId(findByKey(key).map(RoutingConfiguration::getId).orElse(null));
-        userRoute.setKey(key);
-        userRoute.setLocation(location);
-        routingConfigurationRepository.save(userRoute);
+        RoutingConfigurationEntity.Key key = new RoutingConfigurationEntity.Key(contextPath, version);
+        RoutingConfigurationEntity entity = new RoutingConfigurationEntity();
+        entity.setId(findByKey(key).map(RoutingConfigurationEntity::getId).orElse(null));
+        entity.setKey(key);
+        entity.setLocation(location);
+        routingConfigurationRepository.save(entity);
     }
 
-
-    public void delete(String contextPath, String user) {
-        RoutingConfiguration.Key key = new RoutingConfiguration.Key(contextPath, user);
-        findByKey(key).ifPresent(p -> routingConfigurationRepository.delete(p.getId()));
+    public void delete(String contextPath, String version) {
+        if (contextPath != null && version != null) {
+            RoutingConfigurationEntity.Key key = new RoutingConfigurationEntity.Key(contextPath, version);
+            findByKey(key).ifPresent(p -> routingConfigurationRepository.delete(p.getId()));
+        } else if (contextPath != null) {
+            routingConfigurationRepository.findByContextPath(contextPath).forEach(p -> routingConfigurationRepository.delete(p.getId()));
+        } else if (version != null) {
+            routingConfigurationRepository.findByVersion(version).forEach(p -> routingConfigurationRepository.delete(p.getId()));
+        } else {
+            routingConfigurationRepository.deleteAll();
+        }
     }
 }

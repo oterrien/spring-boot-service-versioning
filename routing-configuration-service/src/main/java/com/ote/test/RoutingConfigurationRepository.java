@@ -8,10 +8,13 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface RoutingConfigurationRepository extends JpaRepository<RoutingConfiguration, Integer> {
+public interface RoutingConfigurationRepository extends JpaRepository<RoutingConfigurationEntity, Integer> {
 
-    @Query(value = "select rc from RoutingConfiguration rc where rc.key.contextPath=:contextPath")
-    List<RoutingConfiguration> findByContextPath(@Param("contextPath") String contextPath);
+    RoutingConfigurationEntity findByKey(@Param("key") RoutingConfigurationEntity.Key key);
 
-    RoutingConfiguration findByKey(@Param("key") RoutingConfiguration.Key key);
+    @Query(value = "select rc from RoutingConfigurationEntity rc where rc.key.contextPath=:contextPath")
+    List<RoutingConfigurationEntity> findByContextPath(@Param("contextPath") String contextPath);
+
+    @Query(value = "select rc from RoutingConfigurationEntity rc where rc.key.version=:version")
+    List<RoutingConfigurationEntity> findByVersion(@Param("version") String version);
 }

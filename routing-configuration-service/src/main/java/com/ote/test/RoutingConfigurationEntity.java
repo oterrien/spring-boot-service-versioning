@@ -7,10 +7,10 @@ import lombok.NoArgsConstructor;
 import javax.persistence.*;
 
 @Entity
-@Table(name = "T_USER_ROUTE", uniqueConstraints = {@UniqueConstraint(columnNames = {"PATH", "USER"})})
+@Table(name = "T_ROUTE_CONFIGURATION", uniqueConstraints = {@UniqueConstraint(columnNames = {"PATH", "VERSION"})})
 @Data
 @NoArgsConstructor
-public class UserRoute {
+public class RoutingConfigurationEntity {
 
     @Id
     @GeneratedValue
@@ -20,8 +20,8 @@ public class UserRoute {
     @Embedded
     private Key key;
 
-    @Column(name = "VERSION")
-    private String version;
+    @Column(name = "LOCATION")
+    private String location;
 
     @Embeddable
     @Data
@@ -32,8 +32,8 @@ public class UserRoute {
         @Column(name = "PATH")
         private String contextPath;
 
-        @Column(name = "USER")
-        private String user;
+        @Column(name = "VERSION")
+        private String version;
     }
 }
 

@@ -20,7 +20,7 @@ public class VersionFinder {
 
         return allVersions.
                 stream().
-                filter(extendedVersion::isEligible).
+                filter(extendedVersion::accept).
                 max(Version::compareTo).
                 map(p -> p.version);
     }
@@ -36,7 +36,10 @@ public class VersionFinder {
         public Version(String version) {
 
             this.version = version;
+            doParse();
+        }
 
+        private void doParse() {
             String[] versionPart = version.split("\\.");
 
             for (int i = 0; i < versionPart.length; i++) {
@@ -82,7 +85,7 @@ public class VersionFinder {
             withGreater = version.startsWith("^");
         }
 
-        public boolean isEligible(Version version) {
+        public boolean accept(Version version) {
 
             return withGreater ? version.compareTo(this) >= 0 : version.compareTo(this) == 0;
         }

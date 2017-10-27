@@ -33,7 +33,6 @@ public class RoutingUserZuulFilter extends ZuulFilter {
 
     private static final String DYNAMIC = "DYNAMIC";
 
-
     /**
      * - pre filters are executed before the request is routed,
      * - route filters can handle the actual routing of the request,
@@ -120,13 +119,12 @@ public class RoutingUserZuulFilter extends ZuulFilter {
      * @return
      */
     private String getVersionFromUserService(String contextPath, String user) {
-        Route userServiceRoute = routeLocator.getMatchingRoute("/user-service");
+        Route userServiceRoute = routeLocator.getMatchingRoute("/users");
         String userServiceLocation = userServiceRoute.getLocation();
         URI userServiceUri = UriComponentsBuilder.fromHttpUrl(userServiceLocation).
-                path("/api/v1/routes").
-                path("/" + contextPath).
-                path("/" + user).
-                path("/version").
+                path("/api/v1/routes/version").
+                queryParam("contextPath", contextPath).
+                queryParam("user", user).
                 build().encode().toUri();
         ResponseEntity<String> versionToUse = restTemplate.getForEntity(userServiceUri, String.class);
         return versionToUse.getBody();
@@ -134,13 +132,12 @@ public class RoutingUserZuulFilter extends ZuulFilter {
 
     private String getUrlFromRoutingConfigurationService(String contextPath, String version) throws Exception {
 
-        Route routingConfigurationServiceRoute = routeLocator.getMatchingRoute("/routing-configuration-service");
+        Route routingConfigurationServiceRoute = routeLocator.getMatchingRoute("/routes");
         String routingConfigurationServiceLocation = routingConfigurationServiceRoute.getLocation();
         URI routingConfigurationServiceUri = UriComponentsBuilder.fromHttpUrl(routingConfigurationServiceLocation).
-                path("/api/v1/routes").
-                path("/" + contextPath).
-                path("/" + version).
-                path("/location").
+                path("/api/v1/routes/location").
+                queryParam("contextPath", contextPath).
+                queryParam("version", version).
                 build().encode().toUri();
         ResponseEntity<String> versionToUse = restTemplate.getForEntity(routingConfigurationServiceUri, String.class);
         return versionToUse.getBody();

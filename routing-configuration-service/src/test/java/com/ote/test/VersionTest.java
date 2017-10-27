@@ -10,7 +10,7 @@ import java.util.Optional;
 public class VersionTest {
 
     @Test
-    public void release_version(){
+    public void version_should_be_parsed(){
         VersionFinder.Version version = new VersionFinder.Version("1.2.3");
 
         Assertions.assertThat(version.getMajor()).isEqualTo(1);

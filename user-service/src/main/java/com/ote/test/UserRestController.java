@@ -4,33 +4,50 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/routes")
 @Slf4j
 public class UserRestController {
+
+    private AtomicLong count = new AtomicLong(0);
 
     @Autowired
     private UserRoutingService userRoutingService;
 
-    @RequestMapping(value = "/routes/{contextPath}/{user}/version", method = RequestMethod.GET)
+    @RequestMapping(value = "", method = RequestMethod.GET)
     @ResponseBody
-    public String find(@PathVariable("contextPath") String contextPath, @PathVariable(name = "user") String user) {
-        log.info("search version for contextPath = " + contextPath + ", user " + user);
-        return userRoutingService.find(contextPath, user);
+    public List<UserRouteEntity> findAll() {
+        return userRoutingService.findAll();
     }
 
-    @RequestMapping(value = "/routes/{contextPath}/{user}/version", method = RequestMethod.PUT)
+    @RequestMapping(value = "/version", method = RequestMethod.GET)
     @ResponseBody
-    public void save(@PathVariable("contextPath") String contextPath, @PathVariable(name = "user") String user, @RequestBody String version) {
-        log.info("put version = " + version + " for contextPath = " + contextPath + ", user " + user);
-        userRoutingService.save(contextPath, user, version);
+    public String findVersion(@RequestParam("contextPath") String contextPath,
+                       @RequestParam("user") String user) {
+        long cur = count.getAndIncrement();
+        log.info("#" + cur + " - search version for contextPath = " + contextPath + ", user " + user);
+        String version = userRoutingService.find(contextPath, user);
+        log.info("#" + cur + " - version " + version + " for contextPath = " + contextPath + ", user " + user);
+        return version;
     }
 
-
-    @RequestMapping(value = "/routes/{contextPath}/{user}", method = RequestMethod.DELETE)
+    @RequestMapping(value = "", method = RequestMethod.PUT)
     @ResponseBody
-    public void delete(@PathVariable("contextPath") String contextPath, @PathVariable(name = "user") String user) {
-        log.info("remove version for contextPath = " + contextPath + ", user " + user);
+    public void save(@RequestBody UserRoutePayload userRoutePayload) {
+        long cur = count.getAndIncrement();
+        log.info("#" + cur + " - put version = " + userRoutePayload.getVersion() + " for user = " + userRoutePayload.getUser() + " and contextPath = " + userRoutePayload.getContextPath());
+        userRoutingService.save(userRoutePayload.getContextPath(), userRoutePayload.getUser(), userRoutePayload.getVersion());
+    }
+
+    @RequestMapping(value = "", method = RequestMethod.DELETE)
+    @ResponseBody
+    public void delete(@RequestParam(name = "contextPath", required = false) String contextPath,
+                       @RequestParam(name = "user", required = false) String user) {
+        long cur = count.getAndIncrement();
+        log.info("#" + cur + " - remove version for contextPath = " + contextPath + ", user " + user);
         userRoutingService.delete(contextPath, user);
     }
 
